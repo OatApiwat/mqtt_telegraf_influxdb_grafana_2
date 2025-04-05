@@ -1,4 +1,4 @@
-version: '3'
+version: '3.1'
 services:
   mosquitto:
     image: eclipse-mosquitto:latest
@@ -94,17 +94,33 @@ services:
     networks:
       - iot_network
     restart: unless-stopped
-
-  influxdb_to_mssql_all:
-    build: ./influxdb_to_mssql_all
-    container_name: influxdb_to_mssql_all
+  mqtt_python_3:
+    build: ./mqtt_python_3
+    container_name: mqtt_python_3
     depends_on:
-      - influxdb
       - mosquitto
-      # - mssql
     networks:
       - iot_network
     restart: unless-stopped
+  mqtt_python_4:
+    build: ./mqtt_python_4
+    container_name: mqtt_python_4
+    depends_on:
+      - mosquitto
+    networks:
+      - iot_network
+    restart: unless-stopped
+
+  # influxdb_to_mssql_all:
+  #   build: ./influxdb_to_mssql_all
+  #   container_name: influxdb_to_mssql_all
+  #   depends_on:
+  #     - influxdb
+  #     - mosquitto
+  #     # - mssql
+  #   networks:
+  #     - iot_network
+  #   restart: unless-stopped
 
   # influxdb_to_mssql_statistics:
   #   build: ./influxdb_to_mssql_statistics
