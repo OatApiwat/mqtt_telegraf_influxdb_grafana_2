@@ -1,0 +1,125 @@
+version: '3'
+services:
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    container_name: mosquitto
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    networks:
+      - iot_network
+    restart: unless-stopped
+
+  # mssql:
+  #   image: mcr.microsoft.com/mssql/server:2022-latest
+  #   container_name: mssql
+  #   ports:
+  #     - "1433:1433"
+  #   environment:
+  #     - ACCEPT_EULA=Y
+  #     - MSSQL_SA_PASSWORD=NewStrong!Passw0rd
+  #     - MSSQL_PID=Developer  # หรือเปลี่ยนเป็น Express, Standard, Enterprise ตามต้องการ
+  #   volumes:
+  #     - ./mssql:/var/opt/mssql
+  #   networks:
+  #     - iot_network
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 4G
+  #         cpus: '2'
+    # restart: unless-stopped
+
+  telegraf:
+    image: telegraf:latest
+    container_name: telegraf
+    environment:
+      - HOSTNAME=telegraf
+    volumes:
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf
+    networks:
+      - iot_network
+    depends_on:
+      - mosquitto
+      - influxdb
+      # - mssql
+    restart: unless-stopped
+
+  influxdb:
+    image: influxdb:1.8
+    container_name: influxdb
+    environment:
+      - INFLUXDB_DB=iot_data
+      - INFLUXDB_HTTP_AUTH_ENABLED=false
+    ports:
+      - "8086:8086"
+    volumes:
+      - ./influxdb/data:/var/lib/influxdb
+    networks:
+      - iot_network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/data:/var/lib/grafana
+    networks:
+      - iot_network
+    depends_on:
+      - influxdb
+    restart: unless-stopped
+    
+  mqtt_python_1:
+    build: ./mqtt_python_1
+    container_name: mqtt_python_1
+    depends_on:
+      - mosquitto
+    networks:
+      - iot_network
+    restart: unless-stopped
+
+  mqtt_python_2:
+    build: ./mqtt_python_2
+    container_name: mqtt_python_2
+    depends_on:
+      - mosquitto
+    networks:
+      - iot_network
+    restart: unless-stopped
+
+  influxdb_to_mssql_all:
+    build: ./influxdb_to_mssql_all
+    container_name: influxdb_to_mssql_all
+    depends_on:
+      - influxdb
+      - mosquitto
+      # - mssql
+    networks:
+      - iot_network
+    restart: unless-stopped
+
+  # influxdb_to_mssql_statistics:
+  #   build: ./influxdb_to_mssql_statistics
+  #   container_name: influxdb_to_mssql_statistics
+  #   depends_on:
+  #     - influxdb
+  #     - mosquitto
+    # networks:
+    #   - iot_network
+    # restart: unless-stopped
+  
+  
+
+networks:
+  iot_network:
+    driver: bridge
+
+
